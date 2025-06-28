@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра Змейка</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Базовые стили для body, обеспечивающие центрирование и фон */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Темный фон */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Минимальная высота, чтобы занять всю область просмотра */
+            margin: 0;
+            overflow: hidden; /* Скрыть прокрутку */
+        }
+
+        /* Стили для контейнера игры */
+        .game-container {
+            background-color: #2d3748; /* Чуть светлее темный фон для контейнера */
+            border-radius: 1.5rem; /* Закругленные углы */
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5); /* Большая тень для глубины */
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            width: 90%; /* Ширина на мобильных устройствах */
+            max-width: 600px; /* Максимальная ширина на больших экранах */
+        }
+
+        /* Стили для заголовка */
+        h1 {
+            color: #e2e8f0; /* Светлый текст */
+            font-size: 2.5rem; /* Большой размер шрифта */
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Стили для счетчика очков */
+        #score {
+            color: #a0aec0; /* Средний серый текст */
+            font-size: 1.5rem;
+            font-weight: medium;
+        }
+
+        /* Стили для игрового холста */
+        canvas {
+            background-color: #2f855a; /* Темно-зеленый фон для игровой зоны (будет перерисован сеткой) */
+            border-radius: 0.75rem; /* Закругленные углы для холста */
+            border: 2px solid #48bb78; /* Зеленая рамка */
+            display: block; /* Убрать лишние пробелы */
+            width: 100%; /* Холст занимает всю доступную ширину контейнера */
+            max-width: 500px; /* Максимальная ширина холста */
+            height: auto; /* Высота автоматически подстраивается, сохраняя соотношение сторон */
+            aspect-ratio: 1 / 1; /* Сохранять квадратное соотношение сторон */
+        }
+
+        /* Стили для кнопок управления */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Сетка 3x3 для кнопок */
+            gap: 0.75rem;
+            margin-top: 1rem;
+            width: 100%;
+            max-width: 200px; /* Максимальная ширина кнопок */
+        }
+
+        .control-button {
+            background-color: #4299e1; /* Синий цвет для кнопок */
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem; /* Закругленные углы */
+            font-size: 1.125rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            transition: background-color 0.2s, transform 0.2s; /* Плавный переход */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Тень для кнопок */
+        }
+
+        .control-button:hover {
+            background-color: #3182ce; /* Темнее синий при наведении */
+            transform: translateY(-2px); /* Небольшой подъем при наведении */
+        }
+
+        .control-button:active {
+            background-color: #2b6cb0; /* Еще темнее при нажатии */
+            transform: translateY(0); /* Возвращение на место при нажатии */
+        }
+
+        /* Специальные стили для кнопок-стрелок */
+        .control-button.up, .control-button.down {
+            grid-column: 2; /* Стрелки вверх/вниз по центру */
+        }
+
+        .control-button.left {
+            grid-column: 1; /* Стрелка влево */
+        }
+
+        .control-button.right {
+            grid-column: 3; /* Стрелка вправо */
+        }
+
+        /* Стили для кнопки "Начать/Перезапустить" */
+        #startButton {
+            background-color: #48bb78; /* Зеленый цвет для кнопки старта */
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-top: 1rem;
+        }
+
+        #startButton:hover {
+            background-color: #38a169;
+            transform: translateY(-2px);
+        }
+
+        #startButton:active {
+            background-color: #2f855a;
+            transform: translateY(0);
+        }
+
+        /* Стили для сообщения об окончании игры */
+        #gameOverMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            display: none; /* Скрыто по умолчанию */
+            z-index: 10;
+        }
+
+        /* Стили для новых элементов управления игрой (сложность, режим, скины) */
+        .game-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 1rem;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: medium;
+        }
+
+        .option-group select, .option-group input[type="checkbox"] {
+            background-color: #4a5568;
+            color: white;
+            border: 1px solid #6b7280;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+        }
+        .option-group input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: #48bb78; /* Цвет галочки для чекбокса */
+        }
+
+        .skin-selection {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .skin-color-box {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .skin-color-box.selected {
+            border-color: #4299e1; /* Обводка для выбранного скина */
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Игра Змейка</h1>
+        <div id="score" class="text-xl">Очки: 0</div>
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="game-options">
+            <div class="option-group">
+                <label for="difficultySelect">Сложность:</label>
+                <select id="difficultySelect">
+                    <option value="easy">Легко</option>
+                    <option value="medium" selected>Средне</option>
+                    <option value="hard">Сложно</option>
+                </select>
+            </div>
+            <div class="option-group">
+                <label for="endlessModeCheckbox">Бесконечный режим:</label>
+                <input type="checkbox" id="endlessModeCheckbox">
+            </div>
+            <div class="option-group">
+                <label for="mapSelect">Карта/Уровень:</label>
+                <select id="mapSelect">
+                    <option value="none">Пустая</option>
+                    <option value="maze1">Лабиринт 1</option>
+                    <option value="border_center">Граница + Центр</option>
+                </select>
+            </div>
+            <div class="option-group">
+                <label>Скин змейки:</label>
+                <div id="skinSelection" class="skin-selection">
+                    <!-- Скины будут добавлены JS -->
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-button up" data-direction="UP">↑</button>
+            <div style="grid-column: 2;"></div> <!-- Пустой элемент для центрирования -->
+            <button class="control-button left" data-direction="LEFT">←</button>
+            <button class="control-button down" data-direction="DOWN">↓</button>
+            <button class="control-button right" data-direction="RIGHT">→</button>
+        </div>
+        <button id="startButton">Начать игру</button>
+    </div>
+
+    <div id="gameOverMessage" class="hidden">
+        Игра окончена!<br>Ваши очки: <span id="finalScore">0</span>
+    </div>
+
+    <script>
+        // Инициализация игровых переменных
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const startButton = document.getElementById('startButton');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const difficultySelect = document.getElementById('difficultySelect');
+        const endlessModeCheckbox = document.getElementById('endlessModeCheckbox');
+        const mapSelect = document.getElementById('mapSelect');
+        const skinSelectionDiv = document.getElementById('skinSelection');
+
+        const gridSize = 20; // Размер одной ячейки (пикселей)
+        let snake = [{ x: 10, y: 10 }]; // Начальная позиция змейки
+        let food = {}; // Позиция еды
+        let direction = 'RIGHT'; // Текущее направление движения змейки
+        let nextDirection = 'RIGHT'; // Следующее желаемое направление (для предотвращения бага 180 градусов)
+        let score = 0;
+        let gameSpeed = 150; // Скорость игры (меньше число = быстрее)
+        let isGameOver = false;
+        let gameStarted = false;
+        let lastLogicUpdateTime = 0; // Время последнего обновления игровой логики
+
+        let isFoodBeingEaten = false; // Флаг для анимации поедания
+        let foodAnimationStartTime = 0; // Время начала анимации поедания
+        const foodAnimationDuration = 200; // Длительность анимации поедания в мс
+
+        // Настройки сложности
+        const difficultySpeeds = {
+            'easy': 200,
+            'medium': 150,
+            'hard': 100
+        };
+
+        // Настройки скинов змейки
+        const snakeSkins = {
+            'default': {
+                head: { start: '#66BB6A', end: '#388E3C' }, // Зеленый
+                body: { start: '#4CAF50', end: '#2E7D32' }
+            },
+            'blue': {
+                head: { start: '#64B5F6', end: '#1976D2' }, // Синий
+                body: { start: '#2196F3', end: '#0D47A1' }
+            },
+            'purple': {
+                head: { start: '#BA68C8', end: '#7B1FA2' }, // Фиолетовый
+                body: { start: '#9C27B0', end: '#4A148C' }
+            },
+            'red': {
+                head: { start: '#EF5350', end: '#D32F2F' }, // Красный
+                body: { start: '#F44336', end: '#C62828' }
+            }
+        };
+        let currentSkin = 'default'; // Текущий выбранный скин
+
+        // Данные для карт/уровней
+        let currentMapName = 'none'; // Текущая выбранная карта
+        let staticObstacles = []; // Массив для хранения координат препятствий текущей карты
+
+        // Базовые данные для карт (статические элементы)
+        const baseMapData = {
+            'none': [], // Пустая карта
+            'maze1': [ // Простой лабиринт
+                { x: 5, y: 5 }, { x: 5, y: 6 }, { x: 5, y: 7 }, { x: 6, y: 7 }, { x: 7, y: 7 },
+                { x: 15, y: 15 }, { x: 15, y: 14 }, { x: 15, y: 13 }, { x: 14, y: 13 }, { x: 13, y: 13 },
+                { x: 2, y: 12 }, { x: 2, y: 13 }, { x: 2, y: 14 }, { x: 3, y: 14 }, { x: 4, y: 14 },
+                { x: 17, y: 5 }, { x: 17, y: 6 }, { x: 17, y: 7 }, { x: 16, y: 7 }, { x: 15, y: 7 }
+            ],
+            'border_center': [] // Будет сгенерирована динамически
+        };
+
+        // Функция для генерации динамического контента карты (например, границы + центральный блок)
+        function generateDynamicMap(mapName) {
+            const maxGridX = Math.floor(canvas.width / gridSize);
+            const maxGridY = Math.floor(canvas.height / gridSize);
+
+            if (mapName === 'border_center') {
+                const obstacles = [];
+                // Верхняя и нижняя границы
+                for (let i = 0; i < maxGridX; i++) {
+                    obstacles.push({ x: i, y: 0 });
+                    obstacles.push({ x: i, y: maxGridY - 1 });
+                }
+                // Левая и правая границы (исключая уже добавленные углы)
+                for (let i = 1; i < maxGridY - 1; i++) {
+                    obstacles.push({ x: 0, y: i });
+                    obstacles.push({ x: maxGridX - 1, y: i });
+                }
+                // Центральный блок (предполагая, что размер сетки позволяет разместить центр)
+                const blockSize = 3; // Блок 3x3
+                const startX = Math.floor(maxGridX / 2) - Math.floor(blockSize / 2);
+                const startY = Math.floor(maxGridY / 2) - Math.floor(blockSize / 2);
+                for (let row = 0; row < blockSize; row++) {
+                    for (let col = 0; col < blockSize; col++) {
+                        obstacles.push({ x: startX + col, y: startY + row });
+                    }
+                }
+                return obstacles;
+            }
+            return baseMapData[mapName] || [];
+        }
+
+        // Функция для отрисовки выбора скинов
+        function renderSkinSelection() {
+            skinSelectionDiv.innerHTML = ''; // Очищаем предыдущие кнопки
+            for (const skinName in snakeSkins) {
+                const skin = snakeSkins[skinName];
+                const box = document.createElement('div');
+                box.classList.add('skin-color-box');
+                box.style.backgroundColor = skin.body.start; // Используем начальный цвет тела для превью
+                box.dataset.skinName = skinName;
+                if (skinName === currentSkin) {
+                    box.classList.add('selected');
+                }
+                box.addEventListener('click', () => {
+                    currentSkin = skinName;
+                    renderSkinSelection(); // Перерисовать, чтобы обновить выбранный скин
+                    drawGame(performance.now()); // Перерисовать змейку с новым скином
+                });
+                skinSelectionDiv.appendChild(box);
+            }
+        }
+
+        // Функция для установки размера холста и адаптации к экрану
+        function setCanvasSize() {
+            const containerWidth = canvas.parentElement.clientWidth;
+            // Делаем холст квадратным, ограничивая его максимальной шириной 500px
+            const size = Math.min(containerWidth, 500);
+            canvas.width = size;
+            canvas.height = size;
+            // Перерисовать игру, если она уже начата (для адаптации при изменении размера)
+            if (gameStarted) {
+                drawGame(performance.now()); // Передаем текущее время для корректной отрисовки
+            } else {
+                // Если игра не начата, перегенерируем и отрисовываем текущую карту
+                currentMapName = mapSelect.value;
+                staticObstacles = generateDynamicMap(currentMapName);
+                drawGame(performance.now());
+            }
+        }
+
+        // Вызываем при загрузке и изменении размера окна
+        window.addEventListener('load', setCanvasSize);
+        window.addEventListener('resize', setCanvasSize);
+
+        // Функция для рисования сетки на холсте
+        function drawGrid() {
+            ctx.strokeStyle = '#286a4f'; // Более светлый зеленый для сетки
+            ctx.lineWidth = 0.5; // Тонкие линии сетки
+
+            const maxGridX = canvas.width / gridSize;
+            const maxGridY = canvas.height / gridSize;
+
+            for (let i = 0; i < maxGridX; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let i = 0; i < maxGridY; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+        }
+
+        // Функция для рисования сегмента змейки с закругленными углами и градиентом
+        function drawRoundedRect(x, y, width, height, radius, colorStart, colorEnd) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+
+            const grad = ctx.createLinearGradient(x, y, x + width, y + height);
+            grad.addColorStop(0, colorStart);
+            grad.addColorStop(1, colorEnd);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.strokeStyle = '#2d3748'; // Темная обводка для ячеек
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Функция для рисования змейки с анимацией ползания
+        function drawSnake(currentTime) {
+            const skin = snakeSkins[currentSkin];
+            snake.forEach((segment, index) => {
+                let x = segment.x * gridSize;
+                let y = segment.y * gridSize;
+
+                // Анимация ползания: небольшой сдвиг и масштабирование
+                // Используем небольшое смещение, чтобы предотвратить слишком сильное "сплющивание"
+                const animationWave = Math.sin(currentTime * 0.005 + index * 0.5);
+                const scaleFactor = 0.05; // Коэффициент для масштабирования/смещения
+                let scaledWidth = gridSize;
+                let scaledHeight = gridSize;
+                let offsetX = 0;
+                let offsetY = 0;
+
+                if (direction === 'LEFT' || direction === 'RIGHT') {
+                    scaledHeight = gridSize * (1 + animationWave * scaleFactor);
+                    offsetY = gridSize * animationWave * scaleFactor * 0.5;
+                } else { // UP or DOWN
+                    scaledWidth = gridSize * (1 + animationWave * scaleFactor);
+                    offsetX = gridSize * animationWave * scaleFactor * 0.5;
+                }
+
+
+                ctx.save();
+                ctx.translate(x - offsetX, y - offsetY); // Вычитаем, чтобы центрировать масштабирование
+
+                if (index === 0) { // Голова змейки
+                    drawRoundedRect(0, 0, scaledWidth, scaledHeight, 3, skin.head.start, skin.head.end);
+
+                    // Глаза змейки (позиция относительно головы)
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    // Левый глаз
+                    ctx.arc(scaledWidth * 0.3, scaledHeight * 0.3, gridSize * 0.1, 0, Math.PI * 2);
+                    // Правый глаз
+                    ctx.arc(scaledWidth * 0.7, scaledHeight * 0.3, gridSize * 0.1, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    // Левый зрачок
+                    ctx.arc(scaledWidth * 0.3, scaledHeight * 0.3, gridSize * 0.05, 0, Math.PI * 2);
+                    // Правый зрачок
+                    ctx.arc(scaledWidth * 0.7, scaledHeight * 0.3, gridSize * 0.05, 0, Math.PI * 2);
+                    ctx.fill();
+
+                } else { // Тело змейки
+                    drawRoundedRect(0, 0, scaledWidth, scaledHeight, 2, skin.body.start, skin.body.end);
+                }
+                ctx.restore();
+            });
+        }
+
+        // Функция для рисования яблока
+        function drawApple(x, y, sizeMultiplier = 1, alpha = 1) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x * gridSize + gridSize / 2, y * gridSize + gridSize / 2);
+            ctx.scale(sizeMultiplier, sizeMultiplier);
+
+            const appleRadius = gridSize * 0.4;
+            const stemWidth = gridSize * 0.1;
+            const stemHeight = gridSize * 0.2;
+            const leafWidth = gridSize * 0.3;
+            const leafHeight = gridSize * 0.15;
+
+            // Тело яблока (красное)
+            const appleGrad = ctx.createRadialGradient(0, 0, appleRadius * 0.1, 0, 0, appleRadius * 1.2);
+            appleGrad.addColorStop(0, '#FF4500'); // Ярко-красный
+            appleGrad.addColorStop(1, '#DC143C'); // Темно-красный
+            ctx.fillStyle = appleGrad;
+
+            ctx.beginPath();
+            ctx.arc(0, 0, appleRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#8B0000'; // Темно-красная обводка
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Вмятина сверху
+            ctx.beginPath();
+            ctx.moveTo(-appleRadius * 0.2, -appleRadius * 0.7);
+            ctx.quadraticCurveTo(0, -appleRadius * 0.9, appleRadius * 0.2, -appleRadius * 0.7);
+            ctx.fillStyle = '#A0522D'; // Коричневый
+            ctx.fill();
+
+            // Стебель (коричневый)
+            ctx.fillStyle = '#8B4513'; // Коричневый
+            ctx.fillRect(-stemWidth / 2, -appleRadius - stemHeight, stemWidth, stemHeight);
+
+            // Лист (зеленый)
+            const leafGrad = ctx.createLinearGradient(-leafWidth / 2, -appleRadius - stemHeight, leafWidth / 2, -appleRadius - stemHeight + leafHeight);
+            leafGrad.addColorStop(0, '#32CD32'); // Салатовый
+            leafGrad.addColorStop(1, '#008000'); // Темно-зеленый
+            ctx.fillStyle = leafGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(-stemWidth / 2 + 1, -appleRadius - stemHeight + stemHeight / 2); // Отходит от стебля
+            ctx.bezierCurveTo(-leafWidth / 2, -appleRadius - stemHeight + leafHeight,
+                               -leafWidth * 0.8, -appleRadius - stemHeight * 0.5,
+                               -leafWidth / 2, -appleRadius - stemHeight);
+            ctx.bezierCurveTo(-leafWidth * 0.2, -appleRadius - stemHeight * 1.2,
+                               0, -appleRadius - stemHeight * 0.8,
+                               stemWidth / 2 - 1, -appleRadius - stemHeight + stemHeight / 2); // Заканчивается у стебля
+            ctx.fill();
+            ctx.strokeStyle = '#006400'; // Темно-зеленая обводка
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Функция для рисования препятствий на карте
+        function drawMap() {
+            ctx.fillStyle = '#6c757d'; // Цвет для препятствий (серый)
+            ctx.strokeStyle = '#495057'; // Обводка препятствий
+            ctx.lineWidth = 1;
+            staticObstacles.forEach(obstacle => {
+                // Отрисовываем препятствия как обычные закрашенные квадраты
+                ctx.fillRect(obstacle.x * gridSize, obstacle.y * gridSize, gridSize, gridSize);
+                ctx.strokeRect(obstacle.x * gridSize, obstacle.y * gridSize, gridSize, gridSize);
+            });
+        }
+
+
+        // Функция для генерации случайной позиции еды
+        function generateFood() {
+            const maxGridX = Math.floor(canvas.width / gridSize);
+            const maxGridY = Math.floor(canvas.height / gridSize);
+
+            let newFood = {};
+            let collisionDetected;
+            do {
+                collisionDetected = false;
+                newFood = {
+                    x: Math.floor(Math.random() * maxGridX),
+                    y: Math.floor(Math.random() * maxGridY)
+                };
+                // Проверяем, не появилась ли еда на змейке
+                for (let i = 0; i < snake.length; i++) {
+                    if (newFood.x === snake[i].x && newFood.y === snake[i].y) {
+                        collisionDetected = true;
+                        break;
+                    }
+                }
+                // Проверяем, не появилась ли еда на препятствиях
+                if (!collisionDetected) { // Только если не столкнулись со змейкой
+                    for (let i = 0; i < staticObstacles.length; i++) {
+                        if (newFood.x === staticObstacles[i].x && newFood.y === staticObstacles[i].y) {
+                            collisionDetected = true;
+                            break;
+                        }
+                    }
+                }
+            } while (collisionDetected); // Повторяем, пока не найдем свободную позицию
+            food = newFood;
+            console.log(`Food generated at: (${food.x}, ${food.y})`); // Debug: еда
+            isFoodBeingEaten = false; // Сбрасываем флаг анимации
+        }
+
+        // Функция для обновления движения змейки
+        function moveSnake() {
+            if (isGameOver) return;
+
+            // Обновляем направление только один раз за логический шаг,
+            // предотвращая мгновенный разворот на 180 градусов.
+            const currentHead = snake[0];
+            const secondSegment = snake[1]; // Второй сегмент (за головой)
+
+            // Проверяем, если следующее желаемое направление не является противоположным текущему
+            // и не является движением в клетку, где находится второй сегмент.
+            let isValidDirectionChange = true;
+            if (snake.length > 1) { // Проверка актуальна только если змея имеет более одного сегмента
+                // Если head перемещается в secondSegment, это 180-градусный разворот
+                const potentialHeadX = currentHead.x + (nextDirection === 'RIGHT' ? 1 : nextDirection === 'LEFT' ? -1 : 0);
+                const potentialHeadY = currentHead.y + (nextDirection === 'DOWN' ? 1 : nextDirection === 'UP' ? -1 : 0);
+
+                if (potentialHeadX === secondSegment.x && potentialHeadY === secondSegment.y) {
+                    isValidDirectionChange = false;
+                }
+            }
+
+            if (isValidDirectionChange) {
+                direction = nextDirection;
+            } else {
+                // Если попытка разворота на 180, остаемся в текущем направлении
+                nextDirection = direction; // Сбрасываем nextDirection к текущему direction
+            }
+
+
+            let head = { x: currentHead.x, y: currentHead.y }; // Создаем новую голову из текущей
+            const maxGridX = Math.floor(canvas.width / gridSize);
+            const maxGridY = Math.floor(canvas.height / gridSize);
+
+            // Обновление головы в зависимости от текущего (утвержденного) направления
+            switch (direction) {
+                case 'UP':
+                    head.y--;
+                    break;
+                case 'DOWN':
+                    head.y++;
+                    break;
+                case 'LEFT':
+                    head.x--;
+                    break;
+                case 'RIGHT':
+                    head.x++;
+                    break;
+            }
+
+            // Обработка бесконечного режима (телепортация через стены)
+            if (endlessModeCheckbox.checked) {
+                if (head.x < 0) head.x = maxGridX - 1;
+                else if (head.x >= maxGridX) head.x = 0;
+                if (head.y < 0) head.y = maxGridY - 1;
+                else if (head.y >= maxGridY) head.y = 0;
+            }
+
+            // Добавляем новую голову в начало змейки
+            snake.unshift(head);
+            // console.log(`Snake head moved to: (${head.x}, ${head.y}), length: ${snake.length}`); // Debug: движение головы
+
+            // Проверка на столкновение с едой
+            if (head.x === food.x && head.y === food.y && !isFoodBeingEaten) {
+                score++;
+                scoreDisplay.textContent = `Очки: ${score}`;
+                isFoodBeingEaten = true; // Начинаем анимацию поедания
+                foodAnimationStartTime = performance.now(); // Записываем время начала анимации
+                console.log(`Food eaten! Score: ${score}`); // Debug: поедание еды
+
+                // Ускоряем игру при достижении определенного количества очков
+                if (score % 5 === 0 && gameSpeed > 50) {
+                    gameSpeed = Math.max(50, gameSpeed - 10); // Увеличиваем скорость, но не быстрее 50мс
+                    console.log(`Game speed increased to: ${gameSpeed}ms`); // Debug: изменение скорости
+                }
+            } else {
+                // Если еда не съедена, удаляем последний сегмент (змея движется)
+                snake.pop();
+            }
+        }
+
+        // Функция для проверки столкновений
+        function checkCollision() {
+            const head = snake[0];
+            const maxGridX = Math.floor(canvas.width / gridSize);
+            const maxGridY = Math.floor(canvas.height / gridSize);
+
+            // Столкновение со стенами (только если НЕ бесконечный режим)
+            if (!endlessModeCheckbox.checked) {
+                if (
+                    head.x < 0 ||
+                    head.x >= maxGridX ||
+                    head.y < 0 ||
+                    head.y >= maxGridY
+                ) {
+                    isGameOver = true;
+                    console.log(`Game Over: Wall collision at (${head.x}, ${head.y})`); // Debug: столкновение со стеной
+                }
+            }
+
+            // Столкновение с препятствиями (только если НЕ бесконечный режим)
+            // или если препятствия на карте есть
+            if (!endlessModeCheckbox.checked || staticObstacles.length > 0) {
+                for (let i = 0; i < staticObstacles.length; i++) {
+                    if (head.x === staticObstacles[i].x && head.y === staticObstacles[i].y) {
+                        isGameOver = true;
+                        console.log(`Game Over: Obstacle collision at (${head.x}, ${head.y})`); // Debug: столкновение с препятствием
+                        break;
+                    }
+                }
+            }
+
+
+            // Столкновение с собственным телом (всегда)
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    isGameOver = true;
+                    console.log(`Game Over: Self-collision at (${head.x}, ${head.y}) with segment ${i}`); // Debug: столкновение с собой
+                    break;
+                }
+            }
+
+            if (isGameOver) {
+                finalScoreDisplay.textContent = score;
+                gameOverMessage.style.display = 'block'; // Показываем сообщение об окончании игры
+                startButton.textContent = 'Перезапустить игру'; // Обновляем текст кнопки
+                startButton.classList.remove('hidden'); // Показываем кнопку перезапуска
+                console.log(`Game Over! Final Score: ${score}`); // Debug: окончание игры
+            }
+        }
+
+        // Функция для отрисовки всех элементов игры
+        function drawGame(currentTime) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Очистка холста
+            ctx.fillStyle = '#2f855a'; // Фон холста
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid(); // Рисуем сетку
+            drawMap(); // Рисуем препятствия карты
+            drawSnake(currentTime); // Передаем currentTime для анимации ползания
+
+            // Отрисовка еды с анимацией
+            if (isFoodBeingEaten) {
+                const elapsed = currentTime - foodAnimationStartTime;
+                let progress = elapsed / foodAnimationDuration;
+
+                if (progress >= 1) {
+                    // Анимация завершена, генерируем новую еду
+                    generateFood();
+                    isFoodBeingEaten = false;
+                } else {
+                    // Яблоко уменьшается и исчезает
+                    const scale = 1 - progress;
+                    const alpha = 1 - progress;
+                    drawApple(food.x, food.y, scale, alpha);
+                }
+            } else {
+                // Обычная отрисовка еды
+                drawApple(food.x, food.y);
+            }
+        }
+
+        // Основной игровой цикл с requestAnimationFrame
+        function gameLoop(currentTime) {
+            if (isGameOver) return;
+
+            // Обновляем логику игры только когда прошло достаточно времени
+            if (currentTime - lastLogicUpdateTime > gameSpeed) {
+                moveSnake();
+                lastLogicUpdateTime = currentTime;
+            }
+            // Проверка столкновений теперь происходит в moveSnake сразу после движения,
+            // чтобы баг 180 градусов не приводил к пропуску проверки.
+            // Но также проверяем здесь для любых других условий, которые могут возникнуть.
+            checkCollision();
+
+            // Рендеринг происходит на каждом кадре для плавности
+            drawGame(currentTime); // Передаем текущее время для анимации
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Обработчик нажатия клавиш
+        document.addEventListener('keydown', e => {
+            if (isGameOver) return;
+            // Предотвращаем стандартное поведение клавиш-стрелок (прокрутка)
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            // Обновляем nextDirection, но не direction напрямую
+            const newDir = e.key.replace('Arrow', '').toUpperCase();
+            // Проверка на противоположное направление делается в moveSnake
+            nextDirection = newDir;
+        });
+
+        // Обработчики для кнопок управления на сенсорных устройствах
+        document.querySelectorAll('.control-button').forEach(button => {
+            button.addEventListener('click', () => {
+                if (isGameOver) return;
+                const newDir = button.dataset.direction;
+                // Проверка на противоположное направление делается в moveSnake
+                nextDirection = newDir;
+            });
+        });
+
+        // Функция для инициализации или перезапуска игры
+        function initGame() {
+            snake = [{ x: 10, y: 10 }];
+            direction = 'RIGHT'; // Инициализируем оба направления
+            nextDirection = 'RIGHT';
+            score = 0;
+            isGameOver = false;
+            isFoodBeingEaten = false; // Сбрасываем флаг анимации при перезапуске
+            scoreDisplay.textContent = `Очки: ${score}`;
+            gameOverMessage.style.display = 'none'; // Скрыть сообщение об окончании игры
+            startButton.textContent = 'Перезапустить игру'; // Изменить текст кнопки
+            startButton.classList.add('hidden'); // Скрыть кнопку после начала игры
+
+            // Установка скорости на основе выбранной сложности
+            gameSpeed = difficultySpeeds[difficultySelect.value];
+            console.log(`Game initialized with speed: ${gameSpeed}ms (Difficulty: ${difficultySelect.value})`); // Debug
+
+            // Установка текущей карты
+            currentMapName = mapSelect.value;
+            staticObstacles = generateDynamicMap(currentMapName); // Генерируем препятствия для выбранной карты
+            console.log(`Map selected: ${currentMapName}, Obstacles count: ${staticObstacles.length}`); // Debug
+
+            generateFood();
+            gameStarted = true;
+            lastLogicUpdateTime = performance.now(); // Инициализируем время для логики
+            requestAnimationFrame(gameLoop); // Запускаем цикл анимации
+        }
+
+        // Обработчик для кнопки "Начать игру"
+        startButton.addEventListener('click', initGame);
+
+        // Обработчик изменения выбора карты
+        mapSelect.addEventListener('change', () => {
+            // Если игра не запущена, просто обновите предпросмотр карты
+            if (!gameStarted) {
+                currentMapName = mapSelect.value;
+                staticObstacles = generateDynamicMap(currentMapName);
+                drawGame(performance.now()); // Перерисовать, чтобы показать новую карту
+            }
+        });
+
+        // Инициализируем игру при загрузке страницы, но не запускаем автоматически
+        window.onload = function() {
+            setCanvasSize(); // Установить размер холста при загрузке
+            // Отобразить пустой холст и кнопку "Начать игру"
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#2f855a'; // Фон холста
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid(); // Рисуем сетку
+            renderSkinSelection(); // Отображаем выбор скинов при загрузке
+
+            // Инициализируем препятствия карты для выбранной по умолчанию карты
+            currentMapName = mapSelect.value;
+            staticObstacles = generateDynamicMap(currentMapName);
+            drawMap(); // Отрисовываем начальные препятствия карты
+
+            // Если игра не начата, показать кнопку "Начать игру"
+            if (!gameStarted) {
+                startButton.classList.remove('hidden');
+                startButton.textContent = 'Начать игру'; // Убедиться, что текст корректен при загрузке
+            }
+        };
+
+    </script>
+</body>
+</html>
